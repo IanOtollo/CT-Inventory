@@ -23,6 +23,20 @@ export const list = query({
   },
 });
 
+export const getAccountDetails = query({
+  args: { accountId: v.id("departmentAccounts") },
+  handler: async (ctx, args) => {
+    const account = await ctx.db.get(args.accountId);
+    if (!account) return null;
+    const department = await ctx.db.get(account.departmentId);
+    return {
+      email: account.email,
+      departmentName: department?.name || "Unknown",
+      departmentCode: department?.code || "Unknown",
+    };
+  }
+});
+
 export const create = mutation({
   args: {
     departmentId: v.id("departments"),

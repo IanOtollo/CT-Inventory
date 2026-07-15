@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LayoutDashboard, Users, Monitor, LogOut, Settings, X, Loader2 } from "lucide-react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 
 export default function PortalLayout({
@@ -62,7 +62,13 @@ export default function PortalLayout({
   };
 
   // In a real app, retrieve from session
-  const departmentCode = "ICT"; 
+  const [accountId, setAccountId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setAccountId(localStorage.getItem("ct_inventory_account_id"));
+  }, []);
+
+  const accountDetails = useQuery(api.accounts.getAccountDetails, accountId ? { accountId: accountId as any } : "skip");
 
   useEffect(() => {
     const handleScroll = () => {
@@ -96,7 +102,9 @@ export default function PortalLayout({
           </div>
           <div>
             <h1 className="text-lg font-heading font-bold text-[var(--color-busia-black)] leading-tight">Busia County</h1>
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider">ICT Portal</p>
+            <p className="text-[10px] text-gray-500 tracking-wider">
+              {accountDetails ? accountDetails.email : "Loading..."}
+            </p>
           </div>
         </div>
         <div className="ml-auto flex items-center space-x-4">

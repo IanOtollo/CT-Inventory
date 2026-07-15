@@ -1,10 +1,34 @@
+"use client";
+
 import Link from "next/link";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 
 export default function PortalDashboardPage() {
+  const [departmentId, setDepartmentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDepartmentId(localStorage.getItem("ct_inventory_dept"));
+  }, []);
+
+  const data = useQuery(api.departments.getDepartmentDashboardData, departmentId ? { id: departmentId as any } : "skip");
+
+  if (departmentId && data === undefined) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-[var(--color-busia-blue)]" />
+      </div>
+    );
+  }
+
+  const deptName = data?.department.name || "Department";
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-heading font-bold text-[var(--color-busia-black)]">Department Dashboard</h1>
+        <h1 className="text-2xl font-heading font-bold text-[var(--color-busia-black)]">{deptName} Dashboard</h1>
         <p className="text-sm text-gray-500 mt-1">Overview of your department's inventory</p>
       </div>
 

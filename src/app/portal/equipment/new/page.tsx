@@ -26,8 +26,10 @@ export default function NewEquipmentPage() {
   const router = useRouter();
   const [isScanning, setIsScanning] = useState<"tag" | "serial" | null>(null);
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
+  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
   const [newEmployeeName, setNewEmployeeName] = useState("");
   const [newEmployeeTitle, setNewEmployeeTitle] = useState("");
+  const [newCategoryName, setNewCategoryName] = useState("");
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -50,6 +52,16 @@ export default function NewEquipmentPage() {
     setIsAddEmployeeModalOpen(false);
     setNewEmployeeName("");
     setNewEmployeeTitle("");
+  };
+
+  const handleQuickAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategoryName) return;
+    
+    // In a real app, call convex mutation to create category
+    alert("Category created! (Mocked)");
+    setIsAddCategoryModalOpen(false);
+    setNewCategoryName("");
   };
 
   const onSubmit = async (data: FormData) => {
@@ -138,7 +150,16 @@ export default function NewEquipmentPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Category *</label>
+              <div className="flex justify-between items-end mb-1">
+                <label className="block text-sm font-medium text-gray-700">Category *</label>
+                <button 
+                  type="button" 
+                  onClick={() => setIsAddCategoryModalOpen(true)}
+                  className="text-xs text-[var(--color-busia-blue)] hover:underline flex items-center"
+                >
+                  <Plus size={12} className="mr-1" /> Add Category
+                </button>
+              </div>
               <input type="hidden" {...register("categoryId")} />
               <CustomSelect
                 options={categories.map(c => ({ value: c._id, label: c.name }))}
@@ -240,6 +261,50 @@ export default function NewEquipmentPage() {
           onScan={handleScanSuccess}
           onClose={() => setIsScanning(null)}
         />
+      )}
+
+      {/* Quick Add Category Modal */}
+      {isAddCategoryModalOpen && (
+        <div className="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" aria-hidden="true" onClick={() => setIsAddCategoryModalOpen(false)}></div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="relative z-10 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex justify-between items-center mb-5">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 font-heading">
+                    Quick Add Category
+                  </h3>
+                  <button onClick={() => setIsAddCategoryModalOpen(false)} className="text-gray-400 hover:text-gray-500">
+                    <X size={20} />
+                  </button>
+                </div>
+                
+                <form onSubmit={handleQuickAddCategory} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Category Name *</label>
+                    <input
+                      type="text"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[var(--color-busia-blue)] focus:border-[var(--color-busia-blue)] sm:text-sm"
+                      placeholder="e.g. Router"
+                      required
+                    />
+                  </div>
+                  <div className="pt-4 flex justify-end space-x-3">
+                    <button
+                      type="submit"
+                      className="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[var(--color-busia-blue)] hover:bg-blue-900"
+                    >
+                      Save Category
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Quick Add Employee Modal */}
