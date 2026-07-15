@@ -36,7 +36,7 @@ export default function PortalDashboardPage() {
         <p className="text-sm text-gray-500 mt-1">Overview of your department's inventory</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6">
+      <div className={`grid grid-cols-2 gap-4 mt-6 ${accountDetails?.role === "procurement" ? "md:grid-cols-4 lg:grid-cols-5" : "md:grid-cols-4"}`}>
           {accountDetails?.role === "procurement" && (
             <Link 
               href="/portal/equipment/new"
@@ -68,26 +68,26 @@ export default function PortalDashboardPage() {
 
       <p className="text-xs text-gray-400 text-center italic mt-2">No assets recorded yet. System is ready and waiting.</p>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className={`grid grid-cols-1 ${accountDetails?.role === "procurement" ? "lg:grid-cols-2" : ""} gap-6`}>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 font-heading">Recent Assignments</h3>
           <div className="text-center py-12 bg-gray-50 rounded-md border border-dashed border-gray-300">
             <p className="text-sm text-gray-500">No recent assignment history.</p>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 font-heading">Quick Actions</h3>
-          <div className="space-y-3">
-            <a href="/portal/scan" className="block w-full text-center py-2 px-4 border border-[var(--color-busia-blue)] text-[var(--color-busia-blue)] rounded-md hover:bg-blue-50 transition-colors">
-              Scan Asset Tag
-            </a>
-            {accountDetails?.role === "procurement" && (
+        {accountDetails?.role === "procurement" && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 font-heading">Quick Actions</h3>
+            <div className="space-y-3">
+              <a href="/portal/scan" className="block w-full text-center py-2 px-4 border border-[var(--color-busia-blue)] text-[var(--color-busia-blue)] rounded-md hover:bg-blue-50 transition-colors">
+                Scan Asset Tag
+              </a>
               <a href="/portal/equipment/new" className="block w-full text-center py-2 px-4 bg-[var(--color-busia-green)] text-white rounded-md hover:bg-green-800 transition-colors">
                 Register New Equipment
               </a>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
