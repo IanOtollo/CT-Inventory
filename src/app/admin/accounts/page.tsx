@@ -13,7 +13,7 @@ const schema = z.object({
   departmentId: z.string().min(1, "Department is required"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  role: z.enum(["hod", "procurement", "staff"]).default("staff"),
+  role: z.enum(["hod", "procurement", "staff"]),
 });
 
 type FormData = z.infer<typeof schema>;
