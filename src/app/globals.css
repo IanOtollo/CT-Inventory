@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --color-busia-green: #1E7A46;
+  --color-busia-black: #14181D;
+  --color-busia-blue: #14467B;
+  --color-busia-white: #FAFAFA;
+  
+  --color-status-warning: #B8860B; /* Muted ochre instead of bright yellow */
+  --color-status-info: #3A6D8C; /* Desaturated blue instead of bright blue */
+  
+  --font-heading: Georgia, serif;
+  --font-body: "Open Sans", sans-serif;
+  --font-mono: "DM Mono", "JetBrains Mono", monospace;
+}
+
+:root {
+  background-color: var(--color-busia-white);
+  color: var(--color-busia-black);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+.mono-text {
+  font-family: var(--font-mono);
+}
+
+/* Base structural fixes to avoid gradients/glassmorphism */
+body {
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Formal registry table styling */
+table.registry {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table.registry th, table.registry td {
+  border: 1px solid #E5E7EB;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+table.registry th {
+  background-color: #F3F4F6;
+  font-weight: 600;
+}
