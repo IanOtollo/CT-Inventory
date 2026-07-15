@@ -13,6 +13,7 @@ const schema = z.object({
   departmentId: z.string().min(1, "Department is required"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  role: z.enum(["hod", "procurement", "staff"]).default("staff"),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -29,9 +30,11 @@ export default function AccountsPage() {
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: { role: "staff" }
   });
 
   const departmentIdValue = watch("departmentId") || "";
+  const roleValue = watch("role") || "staff";
 
   useEffect(() => {
     if (departmentIdValue) {
@@ -50,6 +53,7 @@ export default function AccountsPage() {
         departmentId: data.departmentId as any,
         email: data.email,
         password: data.password,
+        role: data.role as any,
       });
       alert("Account created successfully!");
       setIsModalOpen(false);
@@ -104,6 +108,7 @@ export default function AccountsPage() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email / Username</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -118,6 +123,11 @@ export default function AccountsPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {account.email}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800 uppercase">
+                      {account.role || "staff"}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -194,6 +204,22 @@ export default function AccountsPage() {
                             placeholder="e.g. ict@busia.go.ke"
                           />
                           {errors.email && <p className="mt-1 text-sm text-[var(--color-status-warning)]">{errors.email.message}</p>}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Account Role</label>
+                          <input type="hidden" {...register("role")} />
+                          <CustomSelect
+                            options={[
+                              { value: "staff", label: "General Staff" },
+                              { value: "hod", label: "Head of Department" },
+                              { value: "procurement", label: "Procurement Officer" }
+                            ]}
+                            value={roleValue}
+                            onChange={(val) => setValue("role", val as any, { shouldValidate: true })}
+                            error={!!errors.role}
+                          />
+                          {errors.role && <p className="mt-1 text-sm text-[var(--color-status-warning)]">{errors.role.message}</p>}
                         </div>
 
                         <div>

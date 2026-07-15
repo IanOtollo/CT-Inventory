@@ -22,6 +22,7 @@ export default defineSchema({
     passwordHash: v.string(),
     mustChangePassword: v.boolean(),
     lastLogin: v.optional(v.number()),
+    role: v.optional(v.union(v.literal("hod"), v.literal("procurement"), v.literal("staff"))),
   }).index("by_email", ["email"])
     .index("by_department", ["departmentId"]),
 

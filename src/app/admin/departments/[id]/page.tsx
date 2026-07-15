@@ -58,12 +58,12 @@ export default function DepartmentDetailPage() {
             </span>
           </div>
           <p className="text-sm text-gray-500 mt-1 flex flex-col sm:flex-row sm:space-x-4">
-            <span>📍 {department.location}</span>
+            <span>{department.location}</span>
             {department.headOfDepartment && (
-              <span className="mt-1 sm:mt-0 text-[var(--color-busia-blue)]">👤 HOD: {department.headOfDepartment}</span>
+              <span className="mt-1 sm:mt-0 text-[var(--color-busia-blue)]">HOD: {department.headOfDepartment}</span>
             )}
             {department.procurementOfficer && (
-              <span className="mt-1 sm:mt-0 text-[var(--color-busia-green)]">📦 Procurement: {department.procurementOfficer}</span>
+              <span className="mt-1 sm:mt-0 text-[var(--color-busia-green)]">Procurement: {department.procurementOfficer}</span>
             )}
           </p>
         </div>

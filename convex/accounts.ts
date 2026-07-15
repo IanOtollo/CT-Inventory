@@ -15,6 +15,7 @@ export const list = query({
           email: acc.email,
           departmentName: dept?.name || "Unknown",
           departmentCode: dept?.code || "Unknown",
+          role: acc.role || "staff",
           active: true, // Mocking active status since it's not in schema
           lastLogin: acc.lastLogin ? new Date(acc.lastLogin).toLocaleDateString() : null,
         };
@@ -33,6 +34,7 @@ export const getAccountDetails = query({
       email: account.email,
       departmentName: department?.name || "Unknown",
       departmentCode: department?.code || "Unknown",
+      role: account.role || "staff",
     };
   }
 });
@@ -42,6 +44,7 @@ export const create = mutation({
     departmentId: v.id("departments"),
     email: v.string(),
     password: v.string(),
+    role: v.optional(v.union(v.literal("hod"), v.literal("procurement"), v.literal("staff"))),
   },
   handler: async (ctx, args) => {
     // In a real production system we'd hash the password here
@@ -50,6 +53,7 @@ export const create = mutation({
       email: args.email,
       passwordHash: bcrypt.hashSync(args.password, 10), // NOT SECURE - just for prototype parity
       mustChangePassword: true,
+      role: args.role || "staff",
     });
   },
 });
