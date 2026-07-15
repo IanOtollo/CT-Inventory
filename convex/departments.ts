@@ -15,12 +15,16 @@ export const create = mutation({
     name: v.string(),
     code: v.string(),
     location: v.string(),
+    headOfDepartment: v.optional(v.string()),
+    procurementOfficer: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("departments", {
       name: args.name,
       code: args.code,
       location: args.location,
+      headOfDepartment: args.headOfDepartment,
+      procurementOfficer: args.procurementOfficer,
     });
   }
 });

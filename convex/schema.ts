@@ -6,6 +6,8 @@ export default defineSchema({
     name: v.string(),
     code: v.string(),        // short code, e.g. "ICT", "HLT"
     location: v.string(),
+    headOfDepartment: v.optional(v.string()),
+    procurementOfficer: v.optional(v.string()),
   }).index("by_code", ["code"]),
 
   adminAccounts: defineTable({

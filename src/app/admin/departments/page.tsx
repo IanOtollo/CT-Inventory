@@ -13,6 +13,8 @@ const schema = z.object({
   name: z.string().min(1, "Department Name is required"),
   code: z.string().min(1, "Department Code is required (e.g., ICT)"),
   location: z.string().min(1, "Location is required"),
+  headOfDepartment: z.string().optional(),
+  procurementOfficer: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -33,6 +35,8 @@ export default function DepartmentsPage() {
         name: data.name,
         code: data.code,
         location: data.location,
+        headOfDepartment: data.headOfDepartment,
+        procurementOfficer: data.procurementOfficer,
       });
       alert("Department created successfully!");
       setIsModalOpen(false);
@@ -172,6 +176,26 @@ export default function DepartmentsPage() {
                       placeholder="e.g. County Headquarters"
                     />
                     {errors.location && <p className="mt-1 text-sm text-red-600">{errors.location.message}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Head of Department (Optional)</label>
+                    <input
+                      type="text"
+                      {...register("headOfDepartment")}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[var(--color-busia-blue)] focus:border-[var(--color-busia-blue)] sm:text-sm"
+                      placeholder="e.g. John Doe"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Procurement Officer (Optional)</label>
+                    <input
+                      type="text"
+                      {...register("procurementOfficer")}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[var(--color-busia-blue)] focus:border-[var(--color-busia-blue)] sm:text-sm"
+                      placeholder="e.g. Jane Smith"
+                    />
                   </div>
 
                   <div className="pt-4 flex justify-end space-x-3">

@@ -31,7 +31,15 @@ export default function AssetScanner({ isOpen, onClose, onScan, title = "Scan As
     setError("");
 
     // Create the scanner instance directly to bypass the file upload fallback UI
-    const scanner = new Html5Qrcode("qr-reader", { verbose: false });
+    const scanner = new Html5Qrcode("qr-reader", { 
+      verbose: false,
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.EAN_13,
+      ]
+    });
     scannerRef.current = scanner;
 
     scanner.start(
@@ -39,12 +47,6 @@ export default function AssetScanner({ isOpen, onClose, onScan, title = "Scan As
       {
         fps: 10,
         qrbox: { width: 250, height: 250 },
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.QR_CODE,
-          Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.CODE_39,
-          Html5QrcodeSupportedFormats.EAN_13,
-        ]
       },
       (decodedText) => {
         scanner.stop().then(() => {
