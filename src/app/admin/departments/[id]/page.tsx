@@ -68,7 +68,7 @@ export default function DepartmentDetailPage() {
             <Users size={24} />
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">Staff Members</p>
+            <p className="text-sm font-medium text-gray-500">Active members with designated equipments</p>
             <p className="text-2xl font-bold text-gray-900">{employees.length}</p>
           </div>
         </div>
