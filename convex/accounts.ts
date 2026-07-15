@@ -53,7 +53,7 @@ export const create = mutation({
       email: args.email,
       passwordHash: bcrypt.hashSync(args.password, 10), // NOT SECURE - just for prototype parity
       mustChangePassword: true,
-      role: args.role || "staff",
+      role: args.role || "hod",
     });
   },
 });
