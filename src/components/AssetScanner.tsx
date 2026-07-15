@@ -19,10 +19,15 @@ export default function AssetScanner({ isOpen, onClose, onScan, title = "Scan As
   useEffect(() => {
     if (!isOpen) {
       if (scannerRef.current) {
-        scannerRef.current.stop().catch(console.error).finally(() => {
+        try {
+          scannerRef.current.stop().catch(() => {}).finally(() => {
+            scannerRef.current?.clear();
+            scannerRef.current = null;
+          });
+        } catch (e) {
           scannerRef.current?.clear();
           scannerRef.current = null;
-        });
+        }
       }
       return;
     }
@@ -49,17 +54,26 @@ export default function AssetScanner({ isOpen, onClose, onScan, title = "Scan As
         qrbox: { width: 250, height: 250 },
       },
       (decodedText) => {
-        scanner.stop().then(() => {
+        try {
+          scanner.stop().then(() => {
+            scanner.clear();
+            onScan(decodedText);
+            onClose();
+          }).catch(() => {
+            scanner.clear();
+            onScan(decodedText);
+            onClose();
+          });
+        } catch (e) {
           scanner.clear();
           onScan(decodedText);
           onClose();
-        }).catch(console.error);
+        }
       },
       (errorMessage) => {
         // We ignore continuous scan errors as they just mean "no code found yet"
       }
     ).catch((err) => {
-      console.error("Camera start error:", err);
       setError("Could not access the camera. Please ensure you have granted camera permissions in your browser settings.");
     }).finally(() => {
       setIsStarting(false);
@@ -67,10 +81,15 @@ export default function AssetScanner({ isOpen, onClose, onScan, title = "Scan As
 
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.stop().catch(console.error).finally(() => {
+        try {
+          scannerRef.current.stop().catch(() => {}).finally(() => {
+            scannerRef.current?.clear();
+            scannerRef.current = null;
+          });
+        } catch (e) {
           scannerRef.current?.clear();
           scannerRef.current = null;
-        });
+        }
       }
     };
   }, [isOpen, onScan, onClose]);

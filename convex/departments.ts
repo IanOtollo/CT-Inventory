@@ -4,9 +4,22 @@ import { v } from "convex/values";
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    // Sort by name alphabetically in memory (fast enough for 11 departments)
     const departments = await ctx.db.query("departments").collect();
-    return departments.sort((a, b) => a.name.localeCompare(b.name));
+    
+    // Fetch counts for each department
+    const enrichedDepartments = await Promise.all(departments.map(async (dept) => {
+      const accounts = await ctx.db.query("departmentAccounts").withIndex("by_department", q => q.eq("departmentId", dept._id)).collect();
+      const employees = await ctx.db.query("employees").withIndex("by_department", q => q.eq("departmentId", dept._id)).collect();
+      const equipment = await ctx.db.query("equipment").withIndex("by_department", q => q.eq("departmentId", dept._id)).collect();
+      
+      return {
+        ...dept,
+        staffCount: accounts.length + employees.length,
+        assetCount: equipment.length
+      };
+    }));
+    
+    return enrichedDepartments.sort((a, b) => a.name.localeCompare(b.name));
   },
 });
 

@@ -44,7 +44,7 @@ export const create = mutation({
     departmentId: v.id("departments"),
     email: v.string(),
     password: v.string(),
-    role: v.optional(v.union(v.literal("hod"), v.literal("procurement"), v.literal("staff"))),
+    role: v.optional(v.union(v.literal("hod"), v.literal("procurement"))),
   },
   handler: async (ctx, args) => {
     // In a real production system we'd hash the password here

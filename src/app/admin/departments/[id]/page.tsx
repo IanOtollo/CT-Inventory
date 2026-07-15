@@ -156,12 +156,12 @@ export default function DepartmentDetailPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Shared Devices */}
-          <section>
+          <section className="flex flex-col h-full">
             <h2 className="text-lg font-bold text-gray-900 font-heading flex items-center mb-4">
               <Monitor className="mr-2 text-gray-400" size={18} /> 
               Shared Department Devices
             </h2>
-            <div className="bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden h-full">
+            <div className="bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden flex-1">
               {sharedAssets.length === 0 ? (
                 <div className="p-8 text-center text-gray-500 text-sm italic h-full flex items-center justify-center min-h-[150px]">
                   No shared devices registered.
@@ -188,12 +188,12 @@ export default function DepartmentDetailPage() {
           </section>
 
           {/* Storage */}
-          <section>
+          <section className="flex flex-col h-full">
             <h2 className="text-lg font-bold text-gray-900 font-heading flex items-center mb-4">
               <Box className="mr-2 text-gray-400" size={18} /> 
               Unassigned Storage
             </h2>
-            <div className="bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden h-full">
+            <div className="bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden flex-1">
               {storageAssets.length === 0 ? (
                 <div className="p-8 text-center text-gray-500 text-sm italic h-full flex items-center justify-center min-h-[150px]">
                   No assets currently in storage.

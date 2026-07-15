@@ -105,13 +105,13 @@ export default function DepartmentsPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
                     <div className="flex items-center justify-center space-x-1">
                       <Users size={14} />
-                      <span>--</span>
+                      <span>{dept.staffCount}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
                     <div className="flex items-center justify-center space-x-1">
                       <Monitor size={14} />
-                      <span>--</span>
+                      <span>{dept.assetCount}</span>
                     </div>
                   </td>
                 </tr>

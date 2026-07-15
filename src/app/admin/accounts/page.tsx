@@ -13,7 +13,7 @@ const schema = z.object({
   departmentId: z.string().min(1, "Department is required"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  role: z.enum(["hod", "procurement", "staff"]),
+  role: z.enum(["hod", "procurement"]),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -30,7 +30,7 @@ export default function AccountsPage() {
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { role: "staff" }
+    defaultValues: { role: "hod" }
   });
 
   const departmentIdValue = watch("departmentId") || "";
@@ -211,7 +211,6 @@ export default function AccountsPage() {
                           <input type="hidden" {...register("role")} />
                           <CustomSelect
                             options={[
-                              { value: "staff", label: "General Staff" },
                               { value: "hod", label: "Head of Department" },
                               { value: "procurement", label: "Procurement Officer" }
                             ]}
