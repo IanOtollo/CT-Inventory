@@ -51,13 +51,15 @@ export const registerAsset = mutation({
     brandModel: v.string(),
     departmentId: v.id("departments"),
     condition: v.union(v.literal("good"), v.literal("fair"), v.literal("poor"), v.literal("faulty")),
-    employeeId: v.optional(v.union(v.id("employees"), v.literal("unassigned"))),
+    employeeId: v.optional(v.union(v.id("employees"), v.literal("unassigned"), v.literal("shared"))),
     locationRoom: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    const isAssigned = args.employeeId && args.employeeId !== "unassigned";
+    const isAssignedToEmployee = args.employeeId && args.employeeId !== "unassigned" && args.employeeId !== "shared";
+    const isShared = args.employeeId === "shared";
+    const status = (isAssignedToEmployee || isShared) ? "active" : "in_storage";
 
     const equipmentId = await ctx.db.insert("equipment", {
       assetTag: args.assetTag,
@@ -65,8 +67,8 @@ export const registerAsset = mutation({
       categoryId: args.categoryId,
       brandModel: args.brandModel,
       departmentId: args.departmentId,
-      currentEmployeeId: isAssigned ? (args.employeeId as any) : undefined,
-      status: isAssigned ? "active" : "in_storage",
+      currentEmployeeId: isAssignedToEmployee ? (args.employeeId as any) : undefined,
+      status: status,
       condition: args.condition,
       locationRoom: args.locationRoom,
       notes: args.notes,
@@ -74,7 +76,7 @@ export const registerAsset = mutation({
       lastUpdated: now,
     });
 
-    if (isAssigned) {
+    if (isAssignedToEmployee) {
       await ctx.db.insert("assignments", {
         equipmentId,
         employeeId: args.employeeId as any,
@@ -91,7 +93,7 @@ export const registerAsset = mutation({
       entityId: equipmentId,
       performedBy: "system",
       departmentId: args.departmentId,
-      details: `Registered ${args.assetTag} (${isAssigned ? "Assigned" : "Unassigned"})`,
+      details: `Registered ${args.assetTag} (${isAssignedToEmployee ? "Assigned" : isShared ? "Shared" : "Unassigned"})`,
       timestamp: now,
     });
 
