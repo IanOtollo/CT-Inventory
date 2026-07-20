@@ -110,40 +110,22 @@ export default function NewEquipmentPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700">Asset Tag *</label>
-              <div className="mt-1 flex rounded-md shadow-sm">
                 <input
                   type="text"
                   {...register("assetTag")}
-                  className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-l-md border border-gray-300 focus:ring-[var(--color-busia-blue)] focus:border-[var(--color-busia-blue)] sm:text-sm mono-text uppercase"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[var(--color-busia-blue)] focus:border-[var(--color-busia-blue)] sm:text-sm mono-text uppercase"
                   placeholder="CT-ICT-0001"
                 />
-                <button
-                  type="button"
-                  onClick={() => setIsScanning("tag")}
-                  className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 hover:bg-gray-100"
-                >
-                  <ScanLine size={18} className="mr-1" /> Scan
-                </button>
-              </div>
               {errors.assetTag && <p className="mt-1 text-sm text-[var(--color-status-warning)]">{errors.assetTag.message}</p>}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700">Manufacturer Serial Number *</label>
-              <div className="mt-1 flex rounded-md shadow-sm">
                 <input
                   type="text"
                   {...register("serialNumber")}
-                  className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-l-md border border-gray-300 focus:ring-[var(--color-busia-blue)] focus:border-[var(--color-busia-blue)] sm:text-sm mono-text uppercase"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[var(--color-busia-blue)] focus:border-[var(--color-busia-blue)] sm:text-sm mono-text uppercase"
                 />
-                <button
-                  type="button"
-                  onClick={() => setIsScanning("serial")}
-                  className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 hover:bg-gray-100"
-                >
-                  <ScanLine size={18} className="mr-1" /> Scan
-                </button>
-              </div>
               {errors.serialNumber && <p className="mt-1 text-sm text-[var(--color-status-warning)]">{errors.serialNumber.message}</p>}
             </div>
           </div>
