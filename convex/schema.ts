@@ -43,6 +43,7 @@ export default defineSchema({
     serialNumber: v.string(),       
     categoryId: v.id("equipmentCategories"),
     brandModel: v.string(),
+    technicalSpecifications: v.optional(v.string()),
     description: v.optional(v.string()),
     departmentId: v.id("departments"),      
     currentEmployeeId: v.optional(v.id("employees")), 
@@ -54,7 +55,17 @@ export default defineSchema({
       v.literal("lost"),
       v.literal("disposed")
     ),
-    condition: v.union(v.literal("good"), v.literal("fair"), v.literal("poor"), v.literal("faulty")),
+    condition: v.union(
+      v.literal("working"),
+      v.literal("faulty_repairable"),
+      v.literal("faulty_unrepairable"),
+      v.literal("in_store"),
+      v.literal("missing"),
+      v.literal("good"), 
+      v.literal("fair"), 
+      v.literal("poor"), 
+      v.literal("faulty")
+    ),
     locationRoom: v.optional(v.string()),
     notes: v.optional(v.string()),
     dateRegistered: v.number(),

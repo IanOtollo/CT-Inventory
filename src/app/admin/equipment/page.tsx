@@ -64,9 +64,9 @@ export default function EquipmentPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {equipment.map((item) => (
                 <tr 
-                  key={item.id} 
+                  key={item._id} 
                   className="hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => router.push(`/admin/equipment/${item.id}`)}
+                  onClick={() => router.push(`/admin/equipment/${item._id}`)}
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 mono-text">
                     {item.tag}
@@ -77,8 +77,8 @@ export default function EquipmentPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {item.brand}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 mono-text">
-                    {item.serial}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono uppercase">
+                    {item.serial?.toUpperCase()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">

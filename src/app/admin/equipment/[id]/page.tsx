@@ -1,40 +1,58 @@
-import { notFound } from "next/navigation";
+"use client";
 
-// Next.js 15 route parameters signature
-export default async function EquipmentDetailPage(props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
-  const assetId = params.id;
+import { notFound, useParams, useRouter } from "next/navigation";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
+
+export default function EquipmentDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const assetId = params.id as string;
 
   if (!assetId) notFound();
 
-  // Mock data for UI demonstration
-  const asset = {
-    assetTag: "CT-ICT-0001",
-    serialNumber: "SN123456789",
-    category: "Laptop",
-    brandModel: "Dell Latitude 5420",
-    status: "active",
-    condition: "good",
-    department: "Strategic Partnership, ICT & Digital Economy",
-    currentHolder: "John Doe (ICT-001)"
-  };
+  const assetData = useQuery(api.equipment.getById, { id: assetId as any });
 
-  const assignmentHistory = [
-    { date: "2026-07-10", action: "Assigned to John Doe", reason: "new_assignment", loggedBy: "ICT" },
-    { date: "2026-06-01", action: "Returned by Jane Smith", reason: "employee_exit", loggedBy: "ICT" },
-    { date: "2025-11-15", action: "Assigned to Jane Smith", reason: "new_assignment", loggedBy: "ICT" },
-  ];
+  if (assetData === undefined) {
+    return (
+      <div className="flex justify-center items-center h-[50vh]">
+        <Loader2 className="animate-spin text-[var(--color-busia-blue)]" size={32} />
+      </div>
+    );
+  }
+
+  if (assetData === null) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-xl font-semibold text-gray-700">Asset not found</h2>
+        <button onClick={() => router.back()} className="mt-4 text-[var(--color-busia-blue)] hover:underline">
+          Go back
+        </button>
+      </div>
+    );
+  }
+
+  const asset = assetData;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 pb-10">
+      <div className="flex items-center space-x-4 mb-4">
+        <button 
+          onClick={() => router.back()}
+          className="p-2 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-gray-600 transition-colors"
+        >
+          <ArrowLeft size={16} />
+        </button>
         <div>
           <h1 className="text-2xl font-heading font-bold text-[var(--color-busia-black)]">Asset Details</h1>
           <p className="text-sm text-gray-500 mt-1">Detailed history and current status</p>
         </div>
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-[var(--color-busia-green)]">
-          {asset.status.toUpperCase()}
-        </span>
+        <div className="ml-auto">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-[var(--color-busia-green)]">
+            {asset.status.toUpperCase()}
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -52,12 +70,18 @@ export default async function EquipmentDetailPage(props: { params: Promise<{ id:
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Serial Number</dt>
-                <dd className="mt-1 text-sm text-gray-900 mono-text">{asset.serialNumber}</dd>
+                <dd className="mt-1 text-sm text-gray-900 font-mono uppercase">{asset.serialNumber?.toUpperCase()}</dd>
               </div>
               <div className="pt-4 border-t border-gray-200">
                 <dt className="text-sm font-medium text-gray-500">Brand / Model</dt>
                 <dd className="mt-1 text-sm text-gray-900">{asset.brandModel}</dd>
               </div>
+              {asset.technicalSpecifications && (
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Technical Specifications</dt>
+                  <dd className="mt-1 text-sm text-gray-900">{asset.technicalSpecifications}</dd>
+                </div>
+              )}
               <div>
                 <dt className="text-sm font-medium text-gray-500">Category</dt>
                 <dd className="mt-1 text-sm text-gray-900">{asset.category}</dd>
@@ -76,12 +100,18 @@ export default async function EquipmentDetailPage(props: { params: Promise<{ id:
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Current Holder</dt>
-                <dd className="mt-1 text-sm text-gray-900 font-medium">{asset.currentHolder}</dd>
+                <dd className="mt-1 text-sm text-gray-900 font-medium">{asset.holder || "Shared / Unassigned"}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Condition</dt>
-                <dd className="mt-1 text-sm text-gray-900 capitalize">{asset.condition}</dd>
+                <dd className="mt-1 text-sm text-gray-900 capitalize">{asset.condition.replace("_", " ")}</dd>
               </div>
+              {asset.locationRoom && (
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Location / Room</dt>
+                  <dd className="mt-1 text-sm text-gray-900">{asset.locationRoom}</dd>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -96,35 +126,48 @@ export default async function EquipmentDetailPage(props: { params: Promise<{ id:
             
             <div className="p-6">
               <div className="flow-root">
-                <ul role="list" className="-mb-8">
-                  {assignmentHistory.map((event, eventIdx) => (
-                    <li key={eventIdx}>
-                      <div className="relative pb-8">
-                        {eventIdx !== assignmentHistory.length - 1 ? (
-                          <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true" />
-                        ) : null}
-                        <div className="relative flex space-x-3">
-                          <div>
-                            <span className="h-8 w-8 rounded-full bg-[var(--color-busia-blue)] flex items-center justify-center ring-8 ring-white">
-                              <div className="h-2.5 w-2.5 rounded-full bg-white" />
-                            </span>
-                          </div>
-                          <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                            <div>
-                              <p className="text-sm text-gray-500">
-                                {event.action} <span className="text-xs font-mono bg-gray-100 px-1 rounded">({event.reason})</span>
-                              </p>
-                              <p className="text-xs text-gray-400 mt-1">Logged by: {event.loggedBy}</p>
+                {asset.assignmentHistory.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-8">No assignment history recorded.</p>
+                ) : (
+                  <ul role="list" className="-mb-8">
+                    {asset.assignmentHistory.map((event: any, eventIdx: number) => {
+                      const dateStr = new Date(event.assignedDate).toLocaleDateString();
+                      let actionText = `Assigned to ${event.employeeName}`;
+                      if (event.returnedDate) {
+                        actionText = `Held by ${event.employeeName} until ${new Date(event.returnedDate).toLocaleDateString()}`;
+                      }
+
+                      return (
+                        <li key={eventIdx}>
+                          <div className="relative pb-8">
+                            {eventIdx !== asset.assignmentHistory.length - 1 ? (
+                              <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true" />
+                            ) : null}
+                            <div className="relative flex space-x-3">
+                              <div>
+                                <span className="h-8 w-8 rounded-full bg-[var(--color-busia-blue)] flex items-center justify-center ring-8 ring-white">
+                                  <div className="h-2.5 w-2.5 rounded-full bg-white" />
+                                </span>
+                              </div>
+                              <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                <div>
+                                  <p className="text-sm text-gray-800 font-medium">
+                                    {actionText} <span className="text-xs font-mono bg-gray-100 text-gray-500 px-1 rounded ml-1">({event.reason})</span>
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-1">Dept: {event.departmentName} | Logged by: {event.loggedBy}</p>
+                                  {event.notes && <p className="text-sm text-gray-600 mt-2 italic">"{event.notes}"</p>}
+                                </div>
+                                <div className="text-right text-sm whitespace-nowrap text-gray-500">
+                                  <time dateTime={dateStr}>{dateStr}</time>
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                              <time dateTime={event.date}>{event.date}</time>
-                            </div>
                           </div>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </div>
             </div>
           </div>

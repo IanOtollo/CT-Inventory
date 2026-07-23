@@ -104,32 +104,53 @@ export default function AssetDetailView({ params }: { params: { id: string } }) 
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* Details Card */}
-        <div className="md:col-span-2 space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-4 border-b border-gray-200 bg-gray-50 font-medium text-gray-700 flex items-center">
-              <Monitor size={18} className="mr-2 text-gray-400" /> Hardware Details
+        {/* Asset Identity Card */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden border-t-4 border-t-[var(--color-busia-blue)]">
+            <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
+              <h3 className="text-lg leading-6 font-medium text-gray-900 font-heading">Identity</h3>
             </div>
-            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">
+            <div className="px-4 py-5 sm:p-6 space-y-4">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Asset Tag</p>
+                <p className="mt-1 text-lg font-semibold text-gray-900 mono-text bg-gray-100 px-2 py-1 rounded border border-gray-300 inline-block">{asset.assetTag}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Serial Number</p>
+                <p className="font-medium text-gray-900 font-mono uppercase">{asset.serialNumber?.toUpperCase()}</p>
+              </div>
+              <div className="pt-4 border-t border-gray-200">
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Brand / Model</p>
+                <p className="font-medium text-gray-900">{asset.brandModel}</p>
+              </div>
+              {asset.technicalSpecifications && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Technical Specifications</p>
+                  <p className="font-medium text-gray-900">{asset.technicalSpecifications}</p>
+                </div>
+              )}
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Category</p>
                 <p className="font-medium text-gray-900">{asset.category}</p>
               </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden border-t-4 border-t-[var(--color-busia-green)]">
+            <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
+              <h3 className="text-lg leading-6 font-medium text-gray-900 font-heading">Current State</h3>
+            </div>
+            <div className="px-4 py-5 sm:p-6 space-y-4">
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Serial Number</p>
-                <p className="font-medium text-gray-900 mono-text">{asset.serial}</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Owning Department</p>
+                <p className="font-medium text-gray-900">{asset.department}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Current Holder</p>
+                <p className="font-medium text-gray-900">{asset.holder || "Shared / Unassigned"}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Physical Condition</p>
-                <p className="font-medium text-gray-900 capitalize">{asset.condition}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Location / Room</p>
-                <p className="font-medium text-gray-900">{asset.locationRoom || "N/A"}</p>
-              </div>
-              <div className="sm:col-span-2">
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Notes</p>
-                <p className="text-sm text-gray-700">{asset.notes || "No additional notes."}</p>
               </div>
             </div>
           </div>

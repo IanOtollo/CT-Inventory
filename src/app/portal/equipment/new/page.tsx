@@ -14,7 +14,9 @@ const schema = z.object({
   serialNumber: z.string().min(1, "Serial Number is required"),
   categoryId: z.string().min(1, "Category is required"),
   brandModel: z.string().min(1, "Brand/Model is required"),
-  condition: z.enum(["good", "fair", "poor", "faulty"]),
+  technicalSpecifications: z.string().optional(),
+  departmentId: z.string().min(1, "Department is required"),
+  condition: z.enum(["working", "faulty_repairable", "faulty_unrepairable", "in_store", "missing", "good", "fair", "poor", "faulty"]),
   employeeId: z.string().optional(),
   locationRoom: z.string().optional(),
   notes: z.string().optional(),
@@ -33,11 +35,11 @@ export default function NewEquipmentPage() {
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { condition: "good" }
+    defaultValues: { condition: "working" }
   });
 
   const categoryIdValue = watch("categoryId") || "";
-  const conditionValue = watch("condition") || "good";
+  const conditionValue = watch("condition") || "working";
   const employeeIdValue = watch("employeeId") || "unassigned";
 
   // Empty array while waiting for backend integration
@@ -66,7 +68,13 @@ export default function NewEquipmentPage() {
 
   const onSubmit = async (data: FormData) => {
     // In a real app, call convex mutation: useMutation(api.equipment.registerEquipment)
-    console.log("Submitting", data);
+    console.log("Submitting", {
+        ...data,
+        categoryId: data.categoryId,
+        brandModel: data.brandModel,
+        technicalSpecifications: data.technicalSpecifications,
+        departmentId: data.departmentId
+    });
     alert("Asset Registered successfully!");
   };
 
@@ -172,7 +180,19 @@ export default function NewEquipmentPage() {
               />
               {errors.brandModel && <p className="mt-1 text-sm text-[var(--color-status-warning)]">{errors.brandModel.message}</p>}
             </div>
+          </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Technical Specification (Optional)</label>
+            <input
+              type="text"
+              {...register("technicalSpecifications")}
+              className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[var(--color-busia-blue)] focus:border-[var(--color-busia-blue)] sm:text-sm"
+              placeholder="e.g. Prodesk Core i7, 1Tb"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gray-200 pt-6">
             <div className="md:col-span-2">
               <div className="flex justify-between items-end mb-1">
                 <label className="block text-sm font-medium text-gray-700">Assign to Employee (optional)</label>
@@ -196,7 +216,6 @@ export default function NewEquipmentPage() {
                 placeholder="Select an employee"
               />
             </div>
-          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gray-200 pt-6">
             <div>
@@ -204,10 +223,11 @@ export default function NewEquipmentPage() {
               <input type="hidden" {...register("condition")} />
               <CustomSelect
                 options={[
-                  { value: "good", label: "Good (Working, no damage)" },
-                  { value: "fair", label: "Fair (Working, visible wear)" },
-                  { value: "poor", label: "Poor (Working poorly, damaged)" },
-                  { value: "faulty", label: "Faulty (Not working)" },
+                  { value: "working", label: "Working (No damage)" },
+                  { value: "faulty_repairable", label: "Faulty-Repairable (Damaged Repairable)" },
+                  { value: "faulty_unrepairable", label: "Faulty-Beyond Repair (Wornout)" },
+                  { value: "in_store", label: "In-Store (Stash, holding)" },
+                  { value: "missing", label: "Missing (Misplaced)" },
                 ]}
                 value={conditionValue}
                 onChange={(val) => setValue("condition", val as any, { shouldValidate: true })}

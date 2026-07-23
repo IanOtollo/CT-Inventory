@@ -16,8 +16,9 @@ const schema = z.object({
   serialNumber: z.string().min(1, "Serial Number is required"),
   categoryId: z.string().min(1, "Category is required"),
   brandModel: z.string().min(1, "Brand/Model is required"),
+  technicalSpecifications: z.string().optional(),
   departmentId: z.string().min(1, "Department is required"),
-  condition: z.enum(["good", "fair", "poor", "faulty"]),
+  condition: z.enum(["working", "faulty_repairable", "faulty_unrepairable", "in_store", "missing", "good", "fair", "poor", "faulty"]),
   employeeId: z.string().optional(),
   locationRoom: z.string().optional(),
   notes: z.string().optional(),
@@ -34,12 +35,12 @@ export default function AdminNewEquipmentPage() {
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { condition: "good" }
+    defaultValues: { condition: "working" }
   });
 
   const departmentIdValue = watch("departmentId") || "";
   const categoryIdValue = watch("categoryId") || "";
-  const conditionValue = watch("condition") || "good";
+  const conditionValue = watch("condition") || "working";
   const employeeIdValue = watch("employeeId") || "unassigned";
 
   // Fetch data from Convex
@@ -87,6 +88,7 @@ export default function AdminNewEquipmentPage() {
         serialNumber: data.serialNumber,
         categoryId: data.categoryId as any,
         brandModel: data.brandModel,
+        technicalSpecifications: data.technicalSpecifications,
         departmentId: data.departmentId as any,
         condition: data.condition,
         employeeId: data.employeeId as any,
@@ -231,16 +233,27 @@ export default function AdminNewEquipmentPage() {
             </div>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Technical Specification (Optional)</label>
+            <input
+              type="text"
+              {...register("technicalSpecifications")}
+              className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[var(--color-busia-blue)] focus:border-[var(--color-busia-blue)] sm:text-sm"
+              placeholder="e.g. Prodesk Core i7, 1Tb"
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gray-200 pt-6">
             <div>
               <label className="block text-sm font-medium text-gray-700">Physical Condition</label>
               <input type="hidden" {...register("condition")} />
               <CustomSelect
                 options={[
-                  { value: "good", label: "Good (Working, no damage)" },
-                  { value: "fair", label: "Fair (Working, visible wear)" },
-                  { value: "poor", label: "Poor (Working poorly, damaged)" },
-                  { value: "faulty", label: "Faulty (Not working)" },
+                  { value: "working", label: "Working (No damage)" },
+                  { value: "faulty_repairable", label: "Faulty-Repairable (Damaged Repairable)" },
+                  { value: "faulty_unrepairable", label: "Faulty-Beyond Repair (Wornout)" },
+                  { value: "in_store", label: "In-Store (Stash, holding)" },
+                  { value: "missing", label: "Missing (Misplaced)" },
                 ]}
                 value={conditionValue}
                 onChange={(val) => setValue("condition", val as any, { shouldValidate: true })}

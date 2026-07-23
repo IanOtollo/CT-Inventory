@@ -43,14 +43,58 @@ export const getByTag = query({
   },
 });
 
+export const getById = query({
+  args: { id: v.id("equipment") },
+  handler: async (ctx, args) => {
+    const asset = await ctx.db.get(args.id);
+    if (!asset) return null;
+    
+    const resolvedAsset = await resolveAssetRelations(ctx, asset);
+    
+    // Fetch assignment history
+    const assignments = await ctx.db
+      .query("assignments")
+      .withIndex("by_equipment", (q) => q.eq("equipmentId", args.id))
+      .collect();
+      
+    const assignmentHistory = await Promise.all(assignments.map(async (a) => {
+      const emp = await ctx.db.get(a.employeeId);
+      return {
+        ...a,
+        employeeName: emp?.fullName || "Unknown Employee",
+        departmentName: (await ctx.db.get(a.departmentId))?.name || "Unknown Department"
+      };
+    }));
+    
+    // Sort descending by date
+    assignmentHistory.sort((a, b) => b.assignedDate - a.assignedDate);
+    
+    return {
+      ...resolvedAsset,
+      assignmentHistory
+    };
+  },
+});
+
 export const registerAsset = mutation({
   args: {
     assetTag: v.string(),
     serialNumber: v.string(),
     categoryId: v.id("equipmentCategories"),
     brandModel: v.string(),
+    technicalSpecifications: v.optional(v.string()),
     departmentId: v.id("departments"),
-    condition: v.union(v.literal("good"), v.literal("fair"), v.literal("poor"), v.literal("faulty")),
+    condition: v.union(
+      v.literal("working"),
+      v.literal("faulty_repairable"),
+      v.literal("faulty_unrepairable"),
+      v.literal("in_store"),
+      v.literal("missing"),
+      v.literal("good"), 
+      v.literal("fair"), 
+      v.literal("poor"), 
+      v.literal("faulty")
+    ),
     employeeId: v.optional(v.union(v.id("employees"), v.literal("unassigned"), v.literal("shared"))),
     locationRoom: v.optional(v.string()),
     notes: v.optional(v.string()),
@@ -63,9 +107,10 @@ export const registerAsset = mutation({
 
     const equipmentId = await ctx.db.insert("equipment", {
       assetTag: args.assetTag,
-      serialNumber: args.serialNumber,
+      serialNumber: args.serialNumber.toUpperCase(),
       categoryId: args.categoryId,
       brandModel: args.brandModel,
+      technicalSpecifications: args.technicalSpecifications,
       departmentId: args.departmentId,
       currentEmployeeId: isAssignedToEmployee ? (args.employeeId as any) : undefined,
       status: status,
@@ -185,5 +230,26 @@ export const returnToStore = mutation({
     });
 
     return asset._id;
+  },
+});
+
+export const deleteAsset = mutation({
+  args: {
+    assetTag: v.string(),
+    serialNumber: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const asset = await ctx.db
+      .query("equipment")
+      .withIndex("by_assetTag", (q) => q.eq("assetTag", args.assetTag))
+      .filter((q) => q.eq(q.field("serialNumber"), args.serialNumber))
+      .first();
+
+    if (!asset) {
+      throw new Error("Asset not found");
+    }
+
+    await ctx.db.delete(asset._id);
+    return true;
   },
 });
