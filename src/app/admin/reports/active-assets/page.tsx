@@ -116,12 +116,12 @@ export default function ActiveAssetsReport() {
                   return acc;
                 }, {} as Record<string, any>);
 
-                let groupedHolders = Object.values(assetsByHolder);
+                let groupedHolders = Object.values(assetsByHolder) as any[];
 
                 // Apply search filter
                 if (searchQuery) {
                   const query = searchQuery.toLowerCase();
-                  groupedHolders = groupedHolders.filter(h => 
+                  groupedHolders = groupedHolders.filter((h: any) => 
                     h.holder.toLowerCase().includes(query) ||
                     h.department.toLowerCase().includes(query) ||
                     h.assets.some((a: any) => 
