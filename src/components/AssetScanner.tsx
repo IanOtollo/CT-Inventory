@@ -16,6 +16,19 @@ export default function AssetScanner({ isOpen, onClose, onScan, title = "Scan As
   const [error, setError] = useState<string>("");
   const [isStarting, setIsStarting] = useState(false);
 
+  // Keep the latest callbacks in refs so the camera-start effect below only
+  // depends on `isOpen`. Parent components pass inline onScan/onClose
+  // functions that get a new identity on every render (e.g. triggered by
+  // live Convex queries), and previously those were effect dependencies —
+  // any parent re-render while the modal was open tore down and restarted
+  // the camera, so it never stayed running long enough to capture a code.
+  const onScanRef = useRef(onScan);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onScanRef.current = onScan;
+    onCloseRef.current = onClose;
+  });
+
   useEffect(() => {
     if (!isOpen) {
       if (scannerRef.current) {
@@ -57,23 +70,23 @@ export default function AssetScanner({ isOpen, onClose, onScan, title = "Scan As
         try {
           scanner.stop().then(() => {
             scanner.clear();
-            onScan(decodedText);
-            onClose();
+            onScanRef.current(decodedText);
+            onCloseRef.current();
           }).catch(() => {
             scanner.clear();
-            onScan(decodedText);
-            onClose();
+            onScanRef.current(decodedText);
+            onCloseRef.current();
           });
         } catch (e) {
           scanner.clear();
-          onScan(decodedText);
-          onClose();
+          onScanRef.current(decodedText);
+          onCloseRef.current();
         }
       },
-      (errorMessage) => {
+      () => {
         // We ignore continuous scan errors as they just mean "no code found yet"
       }
-    ).catch((err) => {
+    ).catch(() => {
       setError("Could not access the camera. Please ensure you have granted camera permissions in your browser settings.");
     }).finally(() => {
       setIsStarting(false);
@@ -92,7 +105,10 @@ export default function AssetScanner({ isOpen, onClose, onScan, title = "Scan As
         }
       }
     };
-  }, [isOpen, onScan, onClose]);
+    // Only isOpen should retrigger camera start/stop — onScan/onClose are
+    // read from refs above so their identity changes don't restart the scan.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
