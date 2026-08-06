@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Search, ChevronDown, ChevronRight, Building2, User, Archive, Filter, X } from "lucide-react";
+import { Plus, Search, ChevronRight, Building2, Folder, FolderOpen, Archive, Filter, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
@@ -27,6 +27,24 @@ function formatLabel(value: string) {
   return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// Collapses name variants that refer to the same person (e.g. "Mr. Omwami" / "Mr Omwami" / "Mrs LIllian")
+// caused by duplicate/inconsistent employee records, so they group into one folder.
+function canonicalizeName(name: string) {
+  return name
+    .replace(/\./g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w))
+    .join(" ");
+}
+
+function getInitials(name: string) {
+  const parts = name.split(" ").filter(Boolean);
+  const letters = parts.slice(0, 2).map((p) => p[0]);
+  return letters.join("").toUpperCase();
+}
+
 function matchesSearch(item: any, term: string) {
   if (!term) return true;
   const haystack = [item.tag, item.serial, item.brand, item.category, item.holder, item.department]
@@ -39,7 +57,10 @@ function matchesSearch(item: any, term: string) {
 export default function EquipmentPage() {
   const router = useRouter();
 
-  const equipment = useQuery(api.equipment.listAll) || [];
+  const equipmentData = useQuery(api.equipment.listAll);
+  const isLoading = equipmentData === undefined;
+  const equipment = equipmentData || [];
+
   const [search, setSearch] = useState("");
   const [collapsedDepts, setCollapsedDepts] = useState<Set<string>>(new Set());
   const [expandedHolders, setExpandedHolders] = useState<Set<string>>(new Set());
@@ -97,14 +118,14 @@ export default function EquipmentPage() {
       }
       const dept = deptMap.get(deptId)!;
 
-      const holderKey = item.currentEmployeeId
-        ? String(item.currentEmployeeId)
+      const holderLabel = item.holder ? canonicalizeName(item.holder) : null;
+      const holderKey = holderLabel
+        ? holderLabel.toLowerCase()
         : item.status === "in_storage"
         ? STORAGE_LABEL
         : UNASSIGNED_LABEL;
-      const holderLabel = item.holder || holderKey;
 
-      if (!dept.holders.has(holderKey)) dept.holders.set(holderKey, { label: holderLabel, items: [] });
+      if (!dept.holders.has(holderKey)) dept.holders.set(holderKey, { label: holderLabel || holderKey, items: [] });
       dept.holders.get(holderKey)!.items.push(item);
     }
 
@@ -163,7 +184,7 @@ export default function EquipmentPage() {
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {/* Toolbar */}
         <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row gap-4 sm:items-center">
           <div className="relative flex-1">
@@ -197,7 +218,7 @@ export default function EquipmentPage() {
             </button>
 
             {isFilterOpen && (
-              <div className="absolute right-0 sm:left-0 mt-2 w-72 bg-white border border-gray-200 rounded-md shadow-lg z-20 p-4">
+              <div className="absolute right-0 sm:left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4 folder-pop">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-sm font-semibold text-gray-900">Filter Equipment</h4>
                   <button onClick={() => setIsFilterOpen(false)} className="text-gray-400 hover:text-gray-600">
@@ -262,136 +283,173 @@ export default function EquipmentPage() {
           </div>
 
           <p className="text-xs text-gray-500 whitespace-nowrap sm:ml-auto">
-            {filtered.length} asset{filtered.length === 1 ? "" : "s"} across {departments.length} department{departments.length === 1 ? "" : "s"}
+            {isLoading ? "Loading…" : `${filtered.length} asset${filtered.length === 1 ? "" : "s"} across ${departments.length} department${departments.length === 1 ? "" : "s"}`}
           </p>
         </div>
 
-        <div className="divide-y divide-gray-200">
-          {departments.map((dept) => {
-            const isCollapsed = !isSearching && collapsedDepts.has(dept.id);
-            return (
-              <div key={dept.id}>
-                <button
-                  onClick={() => toggleDept(dept.id)}
-                  className="w-full flex items-center justify-between px-6 py-4 bg-gray-50/60 hover:bg-gray-100 transition-colors text-left"
+        <div className="p-4 space-y-3 bg-gray-50/40">
+          {isLoading &&
+            [...Array(3)].map((_, i) => (
+              <div key={i} className="animate-pulse bg-white rounded-xl border border-gray-200 p-5 h-16" />
+            ))}
+
+          {!isLoading &&
+            departments.map((dept) => {
+              const isCollapsed = !isSearching && collapsedDepts.has(dept.id);
+              return (
+                <div
+                  key={dept.id}
+                  className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
                 >
-                  <div className="flex items-center gap-3">
-                    {isCollapsed ? (
-                      <ChevronRight size={16} className="text-gray-400" />
-                    ) : (
-                      <ChevronDown size={16} className="text-gray-400" />
-                    )}
-                    <Building2 size={16} className="text-[var(--color-busia-blue)]" />
-                    <span className="text-sm font-semibold text-gray-900">{dept.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                      {dept.holderCount} holder{dept.holderCount === 1 ? "" : "s"}
-                    </span>
-                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-200 text-gray-700">
-                      {dept.assetCount} asset{dept.assetCount === 1 ? "" : "s"}
-                    </span>
-                  </div>
-                </button>
+                  <button
+                    onClick={() => toggleDept(dept.id)}
+                    className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <ChevronRight
+                        size={16}
+                        className={`text-gray-400 transition-transform duration-200 ${isCollapsed ? "" : "rotate-90"}`}
+                      />
+                      <div className="p-2 rounded-lg bg-blue-50 text-[var(--color-busia-blue)]">
+                        <Building2 size={16} />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900">{dept.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-blue-50 text-[var(--color-busia-blue)] border border-blue-100">
+                        {dept.holderCount} holder{dept.holderCount === 1 ? "" : "s"}
+                      </span>
+                      <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                        {dept.assetCount} asset{dept.assetCount === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                  </button>
 
-                {!isCollapsed && (
-                  <div className="pl-8 pr-2 pb-2">
-                    {dept.holders.map((holder) => {
-                      const holderKey = `${dept.id}::${holder.key}`;
-                      const isOpen = isSearching || expandedHolders.has(holderKey);
-                      const isSpecial = holder.label === UNASSIGNED_LABEL || holder.label === STORAGE_LABEL;
-                      return (
-                        <div key={holderKey} className="border-l border-gray-200 ml-2">
-                          <button
-                            onClick={() => toggleHolder(holderKey)}
-                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors text-left rounded-md"
+                  {!isCollapsed && (
+                    <div className="px-5 pb-4 pt-1 space-y-2 folder-pop">
+                      {dept.holders.map((holder) => {
+                        const holderKey = `${dept.id}::${holder.key}`;
+                        const isOpen = isSearching || expandedHolders.has(holderKey);
+                        const isSpecial = holder.label === UNASSIGNED_LABEL || holder.label === STORAGE_LABEL;
+                        return (
+                          <div
+                            key={holderKey}
+                            className={`rounded-lg border transition-colors ${
+                              isOpen ? "border-blue-200 bg-blue-50/30" : "border-gray-200 bg-white hover:border-gray-300"
+                            }`}
                           >
-                            <div className="flex items-center gap-3">
-                              {isOpen ? (
-                                <ChevronDown size={14} className="text-gray-400" />
-                              ) : (
-                                <ChevronRight size={14} className="text-gray-400" />
-                              )}
-                              {isSpecial ? (
-                                <Archive size={14} className="text-yellow-600" />
-                              ) : (
-                                <User size={14} className="text-[var(--color-busia-green)]" />
-                              )}
-                              <span className={`text-sm ${isSpecial ? "italic text-gray-500" : "font-medium text-gray-900"}`}>
-                                {holder.label}
+                            <button
+                              onClick={() => toggleHolder(holderKey)}
+                              className="w-full flex items-center justify-between px-4 py-3 text-left"
+                            >
+                              <div className="flex items-center gap-3">
+                                {isSpecial ? (
+                                  <div className="p-1.5 rounded-md bg-yellow-50 text-yellow-600">
+                                    <Archive size={14} />
+                                  </div>
+                                ) : isOpen ? (
+                                  <div className="w-7 h-7 rounded-full bg-[var(--color-busia-green)] text-white flex items-center justify-center text-[11px] font-semibold shrink-0">
+                                    {getInitials(holder.label)}
+                                  </div>
+                                ) : (
+                                  <div className="p-1.5 rounded-md bg-green-50 text-[var(--color-busia-green)]">
+                                    <Folder size={14} />
+                                  </div>
+                                )}
+                                <span className={`text-sm ${isSpecial ? "italic text-gray-500" : "font-medium text-gray-900"}`}>
+                                  {holder.label}
+                                </span>
+                                {isOpen && !isSpecial && (
+                                  <FolderOpen size={14} className="text-[var(--color-busia-green)]" />
+                                )}
+                              </div>
+                              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-white text-gray-600 border border-gray-200">
+                                {holder.items.length} item{holder.items.length === 1 ? "" : "s"}
                               </span>
-                            </div>
-                            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600 border border-gray-200">
-                              {holder.items.length} item{holder.items.length === 1 ? "" : "s"}
-                            </span>
-                          </button>
+                            </button>
 
-                          {isOpen && (
-                            <div className="overflow-x-auto mb-2">
-                              <table className="min-w-full divide-y divide-gray-100">
-                                <thead>
-                                  <tr>
-                                    <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Asset Tag</th>
-                                    <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Item Type</th>
-                                    <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Brand / Model</th>
-                                    <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Serial Number</th>
-                                    <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                                    <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Condition</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                  {holder.items.map((item: any) => (
-                                    <tr
-                                      key={item._id}
-                                      onClick={() => router.push(`/admin/equipment/${item._id}`)}
-                                      className="hover:bg-blue-50/50 transition-colors cursor-pointer"
-                                    >
-                                      <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900 mono-text">
-                                        {item.tag}
-                                      </td>
-                                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{item.category}</td>
-                                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.brand}</td>
-                                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 font-mono uppercase">
-                                        {item.serial?.toUpperCase()}
-                                      </td>
-                                      <td className="px-4 py-2 whitespace-nowrap">
-                                        <span
-                                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                            item.status === "active"
-                                              ? "bg-green-100 text-green-800"
-                                              : item.status === "in_repair"
-                                              ? "bg-yellow-100 text-yellow-800"
-                                              : "bg-gray-100 text-gray-800"
-                                          }`}
-                                        >
-                                          {item.status.replace("_", " ").toUpperCase()}
-                                        </span>
-                                      </td>
-                                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 capitalize">
-                                        {item.condition}
-                                      </td>
+                            {isOpen && (
+                              <div className="overflow-x-auto mx-3 mb-3 rounded-md border border-gray-100 folder-pop">
+                                <table className="min-w-full divide-y divide-gray-100">
+                                  <thead className="bg-gray-50">
+                                    <tr>
+                                      <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Asset Tag</th>
+                                      <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Item Type</th>
+                                      <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Brand / Model</th>
+                                      <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Serial Number</th>
+                                      <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                                      <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Condition</th>
                                     </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                                  </thead>
+                                  <tbody className="bg-white divide-y divide-gray-100">
+                                    {holder.items.map((item: any) => (
+                                      <tr
+                                        key={item._id}
+                                        onClick={() => router.push(`/admin/equipment/${item._id}`)}
+                                        className="hover:bg-blue-50/50 transition-colors cursor-pointer"
+                                      >
+                                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900 mono-text">
+                                          {item.tag}
+                                        </td>
+                                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{item.category}</td>
+                                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.brand}</td>
+                                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 font-mono uppercase">
+                                          {item.serial?.toUpperCase()}
+                                        </td>
+                                        <td className="px-4 py-2 whitespace-nowrap">
+                                          <span
+                                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                              item.status === "active"
+                                                ? "bg-green-100 text-green-800"
+                                                : item.status === "in_repair"
+                                                ? "bg-yellow-100 text-yellow-800"
+                                                : "bg-gray-100 text-gray-800"
+                                            }`}
+                                          >
+                                            {item.status.replace("_", " ").toUpperCase()}
+                                          </span>
+                                        </td>
+                                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 capitalize">
+                                          {item.condition}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
 
-          {departments.length === 0 && (
-            <div className="px-6 py-12 text-center">
+          {!isLoading && departments.length === 0 && (
+            <div className="px-6 py-12 text-center bg-white rounded-xl border border-gray-200">
               <p className="text-sm text-gray-500 italic">No equipment found matching criteria.</p>
             </div>
           )}
         </div>
       </div>
+
+      <style jsx>{`
+        .folder-pop {
+          animation: folderPop 0.15s ease-out;
+        }
+        @keyframes folderPop {
+          from {
+            opacity: 0;
+            transform: translateY(-4px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }
