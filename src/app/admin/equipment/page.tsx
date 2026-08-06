@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Search, ChevronRight, Building2, Folder, FolderOpen, Archive, Filter, X } from "lucide-react";
+import { Plus, Search, Folder, FolderOpen, Archive, Filter, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
@@ -62,13 +62,22 @@ export default function EquipmentPage() {
   const equipment = equipmentData || [];
 
   const [search, setSearch] = useState("");
-  const [collapsedDepts, setCollapsedDepts] = useState<Set<string>>(new Set());
+  const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
   const [expandedHolders, setExpandedHolders] = useState<Set<string>>(new Set());
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [statusFilters, setStatusFilters] = useState<Set<string>>(new Set());
   const [conditionFilters, setConditionFilters] = useState<Set<string>>(new Set());
+  const [categoryFilters, setCategoryFilters] = useState<Set<string>>(new Set());
   const filterRef = useRef<HTMLDivElement>(null);
+
+  const categoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of equipment) {
+      if (item.category) set.add(item.category);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [equipment]);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -89,11 +98,12 @@ export default function EquipmentPage() {
     });
   };
 
-  const activeFilterCount = statusFilters.size + conditionFilters.size;
+  const activeFilterCount = statusFilters.size + conditionFilters.size + categoryFilters.size;
 
   const clearFilters = () => {
     setStatusFilters(new Set());
     setConditionFilters(new Set());
+    setCategoryFilters(new Set());
   };
 
   const filtered = useMemo(
@@ -102,9 +112,10 @@ export default function EquipmentPage() {
         (item: any) =>
           matchesSearch(item, search) &&
           (statusFilters.size === 0 || statusFilters.has(item.status)) &&
-          (conditionFilters.size === 0 || conditionFilters.has(item.condition))
+          (conditionFilters.size === 0 || conditionFilters.has(item.condition)) &&
+          (categoryFilters.size === 0 || categoryFilters.has(item.category))
       ),
-    [equipment, search, statusFilters, conditionFilters]
+    [equipment, search, statusFilters, conditionFilters, categoryFilters]
   );
 
   const departments = useMemo(() => {
@@ -149,16 +160,20 @@ export default function EquipmentPage() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [filtered]);
 
-  const isSearching = search.trim().length > 0;
+  // Keep the left-pane selection valid: pick the first department once loaded,
+  // and re-pick if the current selection drops out (e.g. filtered/searched away).
+  useEffect(() => {
+    if (departments.length === 0) {
+      if (selectedDeptId !== null) setSelectedDeptId(null);
+      return;
+    }
+    if (!selectedDeptId || !departments.some((d) => d.id === selectedDeptId)) {
+      setSelectedDeptId(departments[0].id);
+    }
+  }, [departments, selectedDeptId]);
 
-  const toggleDept = (id: string) => {
-    setCollapsedDepts((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  const selectedDept = departments.find((d) => d.id === selectedDeptId) || null;
+  const isSearching = search.trim().length > 0;
 
   const toggleHolder = (key: string) => {
     setExpandedHolders((prev) => {
@@ -248,7 +263,7 @@ export default function EquipmentPage() {
                   </div>
                 </div>
 
-                <div>
+                <div className="mb-4">
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Condition</p>
                   <div className="flex flex-wrap gap-2">
                     {CONDITION_OPTIONS.map((condition) => {
@@ -270,6 +285,30 @@ export default function EquipmentPage() {
                   </div>
                 </div>
 
+                {categoryOptions.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Item Type</p>
+                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                      {categoryOptions.map((category) => {
+                        const active = categoryFilters.has(category);
+                        return (
+                          <button
+                            key={category}
+                            onClick={() => toggleSetValue(setCategoryFilters, category)}
+                            className={`px-2 py-1 text-xs font-medium rounded-full border transition-colors ${
+                              active
+                                ? "bg-gray-800 text-white border-gray-800"
+                                : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                            }`}
+                          >
+                            {category}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {activeFilterCount > 0 && (
                   <button
                     onClick={clearFilters}
@@ -287,151 +326,169 @@ export default function EquipmentPage() {
           </p>
         </div>
 
-        <div className="p-4 space-y-3 bg-gray-50/40">
-          {isLoading &&
-            [...Array(3)].map((_, i) => (
-              <div key={i} className="animate-pulse bg-white rounded-xl border border-gray-200 p-5 h-16" />
-            ))}
+        {/* Master-detail: departments on the left (1/4), holders on the right (3/4) */}
+        <div className="flex flex-col md:flex-row">
+          {/* Left: department folders */}
+          <aside className="w-full md:w-1/4 md:border-r border-b md:border-b-0 border-gray-200 bg-gray-50/40">
+            <div className="p-3 space-y-1.5 md:max-h-[65vh] md:overflow-y-auto">
+              {isLoading &&
+                [...Array(4)].map((_, i) => (
+                  <div key={i} className="animate-pulse bg-white rounded-lg border border-gray-200 h-14" />
+                ))}
 
-          {!isLoading &&
-            departments.map((dept) => {
-              const isCollapsed = !isSearching && collapsedDepts.has(dept.id);
-              return (
-                <div
-                  key={dept.id}
-                  className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
-                >
-                  <button
-                    onClick={() => toggleDept(dept.id)}
-                    className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <ChevronRight
-                        size={16}
-                        className={`text-gray-400 transition-transform duration-200 ${isCollapsed ? "" : "rotate-90"}`}
-                      />
-                      <div className="p-2 rounded-lg bg-blue-50 text-[var(--color-busia-blue)]">
-                        <Building2 size={16} />
+              {!isLoading &&
+                departments.map((dept) => {
+                  const isSelected = dept.id === selectedDeptId;
+                  return (
+                    <button
+                      key={dept.id}
+                      onClick={() => setSelectedDeptId(dept.id)}
+                      className={`w-full flex items-start gap-2.5 px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                        isSelected
+                          ? "border-[var(--color-busia-blue)] bg-blue-50 shadow-sm"
+                          : "border-transparent bg-white hover:bg-gray-100 border-gray-200"
+                      }`}
+                    >
+                      <div
+                        className={`p-1.5 rounded-md shrink-0 ${
+                          isSelected ? "bg-[var(--color-busia-blue)] text-white" : "bg-blue-50 text-[var(--color-busia-blue)]"
+                        }`}
+                      >
+                        {isSelected ? <FolderOpen size={14} /> : <Folder size={14} />}
                       </div>
-                      <span className="text-sm font-semibold text-gray-900">{dept.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-blue-50 text-[var(--color-busia-blue)] border border-blue-100">
-                        {dept.holderCount} holder{dept.holderCount === 1 ? "" : "s"}
-                      </span>
-                      <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 border border-gray-200">
-                        {dept.assetCount} asset{dept.assetCount === 1 ? "" : "s"}
-                      </span>
-                    </div>
-                  </button>
+                      <div className="min-w-0">
+                        <p
+                          className={`text-sm truncate ${
+                            isSelected ? "font-semibold text-[var(--color-busia-blue)]" : "font-medium text-gray-900"
+                          }`}
+                        >
+                          {dept.name}
+                        </p>
+                        <p className="text-[11px] text-gray-500 mt-0.5">
+                          {dept.holderCount} holder{dept.holderCount === 1 ? "" : "s"} · {dept.assetCount} asset
+                          {dept.assetCount === 1 ? "" : "s"}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
 
-                  {!isCollapsed && (
-                    <div className="px-5 pb-4 pt-1 space-y-2 folder-pop">
-                      {dept.holders.map((holder) => {
-                        const holderKey = `${dept.id}::${holder.key}`;
-                        const isOpen = isSearching || expandedHolders.has(holderKey);
-                        const isSpecial = holder.label === UNASSIGNED_LABEL || holder.label === STORAGE_LABEL;
-                        return (
-                          <div
-                            key={holderKey}
-                            className={`rounded-lg border transition-colors ${
-                              isOpen ? "border-blue-200 bg-blue-50/30" : "border-gray-200 bg-white hover:border-gray-300"
-                            }`}
-                          >
-                            <button
-                              onClick={() => toggleHolder(holderKey)}
-                              className="w-full flex items-center justify-between px-4 py-3 text-left"
-                            >
-                              <div className="flex items-center gap-3">
-                                {isSpecial ? (
-                                  <div className="p-1.5 rounded-md bg-yellow-50 text-yellow-600">
-                                    <Archive size={14} />
-                                  </div>
-                                ) : isOpen ? (
-                                  <div className="w-7 h-7 rounded-full bg-[var(--color-busia-green)] text-white flex items-center justify-center text-[11px] font-semibold shrink-0">
-                                    {getInitials(holder.label)}
-                                  </div>
-                                ) : (
-                                  <div className="p-1.5 rounded-md bg-green-50 text-[var(--color-busia-green)]">
-                                    <Folder size={14} />
-                                  </div>
-                                )}
-                                <span className={`text-sm ${isSpecial ? "italic text-gray-500" : "font-medium text-gray-900"}`}>
-                                  {holder.label}
-                                </span>
-                                {isOpen && !isSpecial && (
-                                  <FolderOpen size={14} className="text-[var(--color-busia-green)]" />
-                                )}
-                              </div>
-                              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-white text-gray-600 border border-gray-200">
-                                {holder.items.length} item{holder.items.length === 1 ? "" : "s"}
-                              </span>
-                            </button>
-
-                            {isOpen && (
-                              <div className="overflow-x-auto mx-3 mb-3 rounded-md border border-gray-100 folder-pop">
-                                <table className="min-w-full divide-y divide-gray-100">
-                                  <thead className="bg-gray-50">
-                                    <tr>
-                                      <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Asset Tag</th>
-                                      <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Item Type</th>
-                                      <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Brand / Model</th>
-                                      <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Serial Number</th>
-                                      <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                                      <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Condition</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="bg-white divide-y divide-gray-100">
-                                    {holder.items.map((item: any) => (
-                                      <tr
-                                        key={item._id}
-                                        onClick={() => router.push(`/admin/equipment/${item._id}`)}
-                                        className="hover:bg-blue-50/50 transition-colors cursor-pointer"
-                                      >
-                                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900 mono-text">
-                                          {item.tag}
-                                        </td>
-                                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{item.category}</td>
-                                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.brand}</td>
-                                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 font-mono uppercase">
-                                          {item.serial?.toUpperCase()}
-                                        </td>
-                                        <td className="px-4 py-2 whitespace-nowrap">
-                                          <span
-                                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                              item.status === "active"
-                                                ? "bg-green-100 text-green-800"
-                                                : item.status === "in_repair"
-                                                ? "bg-yellow-100 text-yellow-800"
-                                                : "bg-gray-100 text-gray-800"
-                                            }`}
-                                          >
-                                            {item.status.replace("_", " ").toUpperCase()}
-                                          </span>
-                                        </td>
-                                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 capitalize">
-                                          {item.condition}
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-
-          {!isLoading && departments.length === 0 && (
-            <div className="px-6 py-12 text-center bg-white rounded-xl border border-gray-200">
-              <p className="text-sm text-gray-500 italic">No equipment found matching criteria.</p>
+              {!isLoading && departments.length === 0 && (
+                <p className="text-sm text-gray-500 italic p-3">No departments found.</p>
+              )}
             </div>
-          )}
+          </aside>
+
+          {/* Right: holder folders for the selected department */}
+          <main className="flex-1 p-4 space-y-2 md:max-h-[65vh] md:overflow-y-auto">
+            {isLoading &&
+              [...Array(3)].map((_, i) => (
+                <div key={i} className="animate-pulse bg-white rounded-lg border border-gray-200 h-14" />
+              ))}
+
+            {!isLoading && !selectedDept && (
+              <div className="px-6 py-12 text-center">
+                <p className="text-sm text-gray-500 italic">No equipment found matching criteria.</p>
+              </div>
+            )}
+
+            {!isLoading && selectedDept && (
+              <div key={selectedDept.id} className="folder-pop space-y-2">
+                {selectedDept.holders.map((holder) => {
+                  const holderKey = `${selectedDept.id}::${holder.key}`;
+                  const isOpen = isSearching || expandedHolders.has(holderKey);
+                  const isSpecial = holder.label === UNASSIGNED_LABEL || holder.label === STORAGE_LABEL;
+                  return (
+                    <div
+                      key={holderKey}
+                      className={`rounded-lg border transition-colors ${
+                        isOpen ? "border-blue-200 bg-blue-50/30" : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}
+                    >
+                      <button
+                        onClick={() => toggleHolder(holderKey)}
+                        className="w-full flex items-center justify-between px-4 py-3 text-left"
+                      >
+                        <div className="flex items-center gap-3">
+                          {isSpecial ? (
+                            <div className="p-1.5 rounded-md bg-yellow-50 text-yellow-600">
+                              <Archive size={14} />
+                            </div>
+                          ) : isOpen ? (
+                            <div className="w-7 h-7 rounded-full bg-[var(--color-busia-green)] text-white flex items-center justify-center text-[11px] font-semibold shrink-0">
+                              {getInitials(holder.label)}
+                            </div>
+                          ) : (
+                            <div className="p-1.5 rounded-md bg-green-50 text-[var(--color-busia-green)]">
+                              <Folder size={14} />
+                            </div>
+                          )}
+                          <span className={`text-sm ${isSpecial ? "italic text-gray-500" : "font-medium text-gray-900"}`}>
+                            {holder.label}
+                          </span>
+                          {isOpen && !isSpecial && <FolderOpen size={14} className="text-[var(--color-busia-green)]" />}
+                        </div>
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-white text-gray-600 border border-gray-200">
+                          {holder.items.length} item{holder.items.length === 1 ? "" : "s"}
+                        </span>
+                      </button>
+
+                      {isOpen && (
+                        <div className="overflow-x-auto mx-3 mb-3 rounded-md border border-gray-100 folder-pop">
+                          <table className="min-w-full divide-y divide-gray-100">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Asset Tag</th>
+                                <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Item Type</th>
+                                <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Brand / Model</th>
+                                <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Serial Number</th>
+                                <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                                <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Condition</th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-100">
+                              {holder.items.map((item: any) => (
+                                <tr
+                                  key={item._id}
+                                  onClick={() => router.push(`/admin/equipment/${item._id}`)}
+                                  className="hover:bg-blue-50/50 transition-colors cursor-pointer"
+                                >
+                                  <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900 mono-text">
+                                    {item.tag}
+                                  </td>
+                                  <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{item.category}</td>
+                                  <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.brand}</td>
+                                  <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 font-mono uppercase">
+                                    {item.serial?.toUpperCase()}
+                                  </td>
+                                  <td className="px-4 py-2 whitespace-nowrap">
+                                    <span
+                                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                        item.status === "active"
+                                          ? "bg-green-100 text-green-800"
+                                          : item.status === "in_repair"
+                                          ? "bg-yellow-100 text-yellow-800"
+                                          : "bg-gray-100 text-gray-800"
+                                      }`}
+                                    >
+                                      {item.status.replace("_", " ").toUpperCase()}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 capitalize">
+                                    {item.condition}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </main>
         </div>
       </div>
 
