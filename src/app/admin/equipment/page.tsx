@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Plus, Search, Folder, FolderOpen, Archive, Filter, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -69,7 +70,9 @@ export default function EquipmentPage() {
   const [statusFilters, setStatusFilters] = useState<Set<string>>(new Set());
   const [conditionFilters, setConditionFilters] = useState<Set<string>>(new Set());
   const [categoryFilters, setCategoryFilters] = useState<Set<string>>(new Set());
-  const filterRef = useRef<HTMLDivElement>(null);
+  const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const filterPanelRef = useRef<HTMLDivElement>(null);
 
   const categoryOptions = useMemo(() => {
     const set = new Set<string>();
@@ -79,15 +82,35 @@ export default function EquipmentPage() {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [equipment]);
 
-  useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
-        setIsFilterOpen(false);
-      }
+  const toggleFilterPanel = () => {
+    if (isFilterOpen) {
+      setIsFilterOpen(false);
+      return;
     }
+    const rect = filterButtonRef.current?.getBoundingClientRect();
+    if (rect) {
+      const panelWidth = 288; // w-72
+      setPanelPos({
+        top: rect.bottom + window.scrollY + 8,
+        left: Math.min(rect.left + window.scrollX, window.innerWidth - panelWidth - 16),
+      });
+    }
+    setIsFilterOpen(true);
+  };
+
+  useEffect(() => {
+    if (!isFilterOpen) return;
+
+    function onClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      const clickedButton = filterButtonRef.current?.contains(target);
+      const clickedPanel = filterPanelRef.current?.contains(target);
+      if (!clickedButton && !clickedPanel) setIsFilterOpen(false);
+    }
+
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
-  }, []);
+  }, [isFilterOpen]);
 
   const toggleSetValue = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, value: string) => {
     setter((prev) => {
@@ -215,9 +238,10 @@ export default function EquipmentPage() {
             />
           </div>
 
-          <div className="relative" ref={filterRef}>
+          <div className="relative">
             <button
-              onClick={() => setIsFilterOpen((v) => !v)}
+              ref={filterButtonRef}
+              onClick={toggleFilterPanel}
               className={`inline-flex items-center px-3 py-2 border shadow-sm text-sm font-medium rounded-md transition-colors ${
                 activeFilterCount > 0
                   ? "border-[var(--color-busia-blue)] bg-blue-50 text-[var(--color-busia-blue)]"
@@ -232,93 +256,107 @@ export default function EquipmentPage() {
               )}
             </button>
 
-            {isFilterOpen && (
-              <div className="absolute right-0 sm:left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4 folder-pop">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-gray-900">Filter Equipment</h4>
-                  <button onClick={() => setIsFilterOpen(false)} className="text-gray-400 hover:text-gray-600">
-                    <X size={16} />
-                  </button>
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Status</p>
-                  <div className="flex flex-wrap gap-2">
-                    {STATUS_OPTIONS.map((status) => {
-                      const active = statusFilters.has(status);
-                      return (
-                        <button
-                          key={status}
-                          onClick={() => toggleSetValue(setStatusFilters, status)}
-                          className={`px-2 py-1 text-xs font-medium rounded-full border transition-colors ${
-                            active
-                              ? "bg-[var(--color-busia-blue)] text-white border-[var(--color-busia-blue)]"
-                              : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
-                          }`}
-                        >
-                          {formatLabel(status)}
-                        </button>
-                      );
-                    })}
+            {isFilterOpen &&
+              panelPos &&
+              createPortal(
+                <div
+                  ref={filterPanelRef}
+                  style={{ position: "absolute", top: panelPos.top, left: panelPos.left }}
+                  className="w-72 max-h-[80vh] flex flex-col bg-white border border-gray-200 rounded-lg shadow-xl z-50 folder-pop"
+                >
+                  <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">
+                    <h4 className="text-sm font-semibold text-gray-900">Filter Equipment</h4>
+                    <button onClick={() => setIsFilterOpen(false)} className="text-gray-400 hover:text-gray-600">
+                      <X size={16} />
+                    </button>
                   </div>
-                </div>
 
-                <div className="mb-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Condition</p>
-                  <div className="flex flex-wrap gap-2">
-                    {CONDITION_OPTIONS.map((condition) => {
-                      const active = conditionFilters.has(condition);
-                      return (
-                        <button
-                          key={condition}
-                          onClick={() => toggleSetValue(setConditionFilters, condition)}
-                          className={`px-2 py-1 text-xs font-medium rounded-full border transition-colors ${
-                            active
-                              ? "bg-[var(--color-busia-green)] text-white border-[var(--color-busia-green)]"
-                              : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
-                          }`}
-                        >
-                          {formatLabel(condition)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {categoryOptions.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Item Type</p>
-                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                      {categoryOptions.map((category) => {
-                        const active = categoryFilters.has(category);
-                        return (
-                          <button
-                            key={category}
-                            onClick={() => toggleSetValue(setCategoryFilters, category)}
-                            className={`px-2 py-1 text-xs font-medium rounded-full border transition-colors ${
-                              active
-                                ? "bg-gray-800 text-white border-gray-800"
-                                : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
-                            }`}
-                          >
-                            {category}
-                          </button>
-                        );
-                      })}
+                  <div className="px-4 pb-2 overflow-y-auto">
+                    <div className="mb-4">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Status</p>
+                      <div className="flex flex-wrap gap-2">
+                        {STATUS_OPTIONS.map((status) => {
+                          const active = statusFilters.has(status);
+                          return (
+                            <button
+                              key={status}
+                              onClick={() => toggleSetValue(setStatusFilters, status)}
+                              className={`px-2 py-1 text-xs font-medium rounded-full border transition-colors ${
+                                active
+                                  ? "bg-[var(--color-busia-blue)] text-white border-[var(--color-busia-blue)]"
+                                  : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                              }`}
+                            >
+                              {formatLabel(status)}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
 
-                {activeFilterCount > 0 && (
-                  <button
-                    onClick={clearFilters}
-                    className="mt-4 w-full text-center text-xs font-medium text-gray-500 hover:text-gray-700 underline"
-                  >
-                    Clear all filters
-                  </button>
-                )}
-              </div>
-            )}
+                    <div className="mb-4">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Condition</p>
+                      <div className="flex flex-wrap gap-2">
+                        {CONDITION_OPTIONS.map((condition) => {
+                          const active = conditionFilters.has(condition);
+                          return (
+                            <button
+                              key={condition}
+                              onClick={() => toggleSetValue(setConditionFilters, condition)}
+                              className={`px-2 py-1 text-xs font-medium rounded-full border transition-colors ${
+                                active
+                                  ? "bg-[var(--color-busia-green)] text-white border-[var(--color-busia-green)]"
+                                  : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                              }`}
+                            >
+                              {formatLabel(condition)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {categoryOptions.length > 0 && (
+                      <div className="mb-1">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Item Type</p>
+                        <div className="flex flex-wrap gap-2">
+                          {categoryOptions.map((category) => {
+                            const active = categoryFilters.has(category);
+                            return (
+                              <button
+                                key={category}
+                                onClick={() => toggleSetValue(setCategoryFilters, category)}
+                                className={`px-2 py-1 text-xs font-medium rounded-full border transition-colors ${
+                                  active
+                                    ? "bg-gray-800 text-white border-gray-800"
+                                    : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                                }`}
+                              >
+                                {category}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="shrink-0 border-t border-gray-100 p-3">
+                    <button
+                      onClick={clearFilters}
+                      disabled={activeFilterCount === 0}
+                      className={`w-full text-center px-3 py-2 text-xs font-semibold rounded-md transition-colors ${
+                        activeFilterCount > 0
+                          ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          : "bg-gray-50 text-gray-300 cursor-not-allowed"
+                      }`}
+                    >
+                      Clear all filters
+                    </button>
+                  </div>
+                </div>,
+                document.body
+              )}
           </div>
 
           <p className="text-xs text-gray-500 whitespace-nowrap sm:ml-auto">
