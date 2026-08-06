@@ -146,6 +146,99 @@ export const registerAsset = mutation({
   },
 });
 
+export const updateAsset = mutation({
+  args: {
+    id: v.id("equipment"),
+    assetTag: v.string(),
+    serialNumber: v.string(),
+    categoryId: v.id("equipmentCategories"),
+    brandModel: v.string(),
+    technicalSpecifications: v.optional(v.string()),
+    departmentId: v.id("departments"),
+    status: v.union(
+      v.literal("active"),
+      v.literal("in_repair"),
+      v.literal("in_storage"),
+      v.literal("retired"),
+      v.literal("lost"),
+      v.literal("disposed")
+    ),
+    condition: v.union(
+      v.literal("working"),
+      v.literal("faulty_repairable"),
+      v.literal("faulty_unrepairable"),
+      v.literal("in_store"),
+      v.literal("missing"),
+      v.literal("good"),
+      v.literal("fair"),
+      v.literal("poor"),
+      v.literal("faulty")
+    ),
+    employeeId: v.optional(v.union(v.id("employees"), v.literal("unassigned"), v.literal("shared"))),
+    locationRoom: v.optional(v.string()),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id);
+    if (!existing) throw new Error("Asset not found");
+
+    const now = Date.now();
+    const isAssignedToEmployee = args.employeeId && args.employeeId !== "unassigned" && args.employeeId !== "shared";
+    const newEmployeeId = isAssignedToEmployee ? (args.employeeId as any) : undefined;
+    const employeeChanged = String(existing.currentEmployeeId ?? "") !== String(newEmployeeId ?? "");
+
+    if (employeeChanged) {
+      if (existing.currentEmployeeId) {
+        const activeAssignment = await ctx.db
+          .query("assignments")
+          .withIndex("by_equipment", (q) => q.eq("equipmentId", existing._id))
+          .filter((q) => q.eq(q.field("returnedDate"), undefined))
+          .first();
+        if (activeAssignment) {
+          await ctx.db.patch(activeAssignment._id, { returnedDate: now });
+        }
+      }
+      if (newEmployeeId) {
+        await ctx.db.insert("assignments", {
+          equipmentId: existing._id,
+          employeeId: newEmployeeId,
+          departmentId: args.departmentId,
+          assignedDate: now,
+          reason: "reassignment",
+          loggedBy: "system",
+        });
+      }
+    }
+
+    await ctx.db.patch(args.id, {
+      assetTag: args.assetTag,
+      serialNumber: args.serialNumber.toUpperCase(),
+      categoryId: args.categoryId,
+      brandModel: args.brandModel,
+      technicalSpecifications: args.technicalSpecifications,
+      departmentId: args.departmentId,
+      currentEmployeeId: newEmployeeId,
+      status: args.status,
+      condition: args.condition,
+      locationRoom: args.locationRoom,
+      notes: args.notes,
+      lastUpdated: now,
+    });
+
+    await ctx.db.insert("auditLog", {
+      action: "equipment_updated",
+      entityType: "equipment",
+      entityId: args.id,
+      performedBy: "system",
+      departmentId: args.departmentId,
+      details: `Updated ${args.assetTag}`,
+      timestamp: now,
+    });
+
+    return args.id;
+  },
+});
+
 export const reassignAsset = mutation({
   args: {
     assetTag: v.string(),
